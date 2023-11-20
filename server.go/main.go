@@ -1,20 +1,47 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+
+	integration "github.com/RomeroGabriel/server.go/integration"
+	service "github.com/RomeroGabriel/server.go/service"
 )
 
-func QuotationHandler(res http.ResponseWriter, req *http.Request) {
-	res.Write([]byte("Hi"))
+func ConvertHighHandler(res http.ResponseWriter, req *http.Request) {
+	api := integration.NewExchangeRateApi("https://economia.awesomeapi.com.br/json/last/USD-BRL")
+	service := service.NewQuotationService(*api)
+
+	queryData := req.URL.Query()
+	if !queryData.Has("value") {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	value_par := req.URL.Query().Get("value")
+	value, err := strconv.ParseFloat(value_par, 64)
+	if err != nil {
+		// handle error
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	result, err := service.CalculateRealToDolar(value)
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(result)
+
 }
 
 func main() {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/cotacao", QuotationHandler)
+	mux.HandleFunc("/convert-high", ConvertHighHandler)
 
 	server := &http.Server{
 		Addr:    ":8080",
