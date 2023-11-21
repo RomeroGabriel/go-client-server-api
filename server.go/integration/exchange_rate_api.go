@@ -1,11 +1,12 @@
 package integration
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"io"
+	"log"
 	"net/http"
-	"strconv"
+	"time"
 )
 
 type ExchangeRateApi struct {
@@ -18,37 +19,52 @@ func NewExchangeRateApi(url_api string) *ExchangeRateApi {
 	}
 }
 
-func (api ExchangeRateApi) GetRealDolarRate() (*ExchangeRateResult, error) {
-	req, err := http.Get(api.url_api)
+func callGetApi(api ExchangeRateApi) (*ApiResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", api.url_api, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer req.Body.Close()
-	res, err := io.ReadAll(req.Body)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 	var result ApiResponse
-	err = json.Unmarshal(res, &result)
+	err = json.Unmarshal(body, &result)
 	if err != nil {
 		return nil, err
 	}
-	exchangeRateResult := ExchangeRateResult{
-		Code:   result.DataResponse.Code,
-		Codein: result.DataResponse.Codein,
-		Name:   result.DataResponse.Name,
-		High:   convertStringToFloat(result.DataResponse.High),
-		Low:    convertStringToFloat(result.DataResponse.Low),
+	select {
+	case <-ctx.Done():
+		log.Println("Request Timeout")
+		return nil, context.Canceled
+	default:
+		return &result, nil
 	}
+}
+
+func (api ExchangeRateApi) GetRealDolarRate() (*ExchangeRateResult, error) {
+	result, err := callGetApi(api)
+	if err != nil {
+		return nil, err
+	}
+	exchangeRateResult := ParserApiResponseToExchangeRateResult(*result)
 	return &exchangeRateResult, nil
 }
 
-func convertStringToFloat(s string) float64 {
-	f, err := strconv.ParseFloat(s, 64)
+func (api ExchangeRateApi) GetExchangeValue() (float64, error) {
+	result, err := callGetApi(api)
 	if err != nil {
-		// handle error
-		fmt.Println(err)
-		return 0
+		return 0.0, err
 	}
-	return f
+	exchangeValue := convertStringToFloat(result.DataResponse.Bid)
+	return exchangeValue, nil
 }

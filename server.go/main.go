@@ -31,6 +31,7 @@ func ConvertHighHandler(res http.ResponseWriter, req *http.Request) {
 	result, err := service.CalculateRealToDolar(value)
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
+		res.Write([]byte(err.Error()))
 		return
 	}
 	res.WriteHeader(http.StatusOK)
@@ -38,10 +39,24 @@ func ConvertHighHandler(res http.ResponseWriter, req *http.Request) {
 
 }
 
+func QuatationHandler(res http.ResponseWriter, req *http.Request) {
+	api := integration.NewExchangeRateApi("https://economia.awesomeapi.com.br/json/last/USD-BRL")
+	service := service.NewQuotationService(*api)
+	result, err := service.GetCurrentExchange()
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		res.Write([]byte(err.Error()))
+		return
+	}
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(result)
+}
+
 func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/convert-high", ConvertHighHandler)
+	mux.HandleFunc("/cotacao", QuatationHandler)
 
 	server := &http.Server{
 		Addr:    ":8080",

@@ -21,3 +21,11 @@ func (service QuotationService) CalculateRealToDolar(real_value float64) (result
 	}
 	return real_value * data.High, nil
 }
+
+func (service QuotationService) GetCurrentExchange() (float64, error) {
+	data, err := service.api.GetExchangeValue()
+	if err != nil {
+		return 0.0, err
+	}
+	return data, nil
+}
