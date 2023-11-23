@@ -2,15 +2,18 @@ package service
 
 import (
 	integration "github.com/RomeroGabriel/server.go/integration"
+	repository "github.com/RomeroGabriel/server.go/repository"
 )
 
 type QuotationService struct {
-	api integration.ExchangeRateApi
+	api        integration.ExchangeRateApi
+	repository repository.ExhangeRateRepository
 }
 
-func NewQuotationService(api integration.ExchangeRateApi) *QuotationService {
+func NewQuotationService(api integration.ExchangeRateApi, repository repository.ExhangeRateRepository) *QuotationService {
 	return &QuotationService{
-		api: api,
+		api:        api,
+		repository: repository,
 	}
 }
 
@@ -27,5 +30,11 @@ func (service QuotationService) GetCurrentExchange() (float64, error) {
 	if err != nil {
 		return 0.0, err
 	}
+
+	err = service.repository.CreateExchange(data)
+	if err != nil {
+		return 0.0, err
+	}
+
 	return data, nil
 }
