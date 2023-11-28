@@ -20,7 +20,7 @@ func NewExchangeRateApi(url_api string) *ExchangeRateApi {
 }
 
 func callGetApi(api ExchangeRateApi) (*ApiResponse, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Nanosecond)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, "GET", api.url_api, nil)
 	if err != nil {
@@ -29,7 +29,8 @@ func callGetApi(api ExchangeRateApi) (*ApiResponse, error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		log.Println("Request Timeout consulting the " + api.url_api + " API")
+		return nil, context.Canceled
 	}
 
 	defer resp.Body.Close()
@@ -44,7 +45,7 @@ func callGetApi(api ExchangeRateApi) (*ApiResponse, error) {
 	}
 	select {
 	case <-ctx.Done():
-		log.Println("Request Timeout")
+		log.Println("Request Timeout consulting the " + api.url_api + " API")
 		return nil, context.Canceled
 	default:
 		return &result, nil
