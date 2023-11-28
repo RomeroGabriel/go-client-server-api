@@ -16,7 +16,15 @@ func NewExhangeRateRepository(db *sql.DB) *ExhangeRateRepository {
 	CREATE TABLE IF NOT EXISTS Exchange 
 		(id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, value FLOAT);
 	`
-	_, err := db.Exec(sqlStmt)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		log.Printf("%q: %s\n", err, sqlStmt)
+		return nil
+	}
+	defer conn.Close()
+	_, err = conn.ExecContext(ctx, sqlStmt)
 	if err != nil {
 		log.Printf("%q: %s\n", err, sqlStmt)
 		return nil
@@ -27,20 +35,27 @@ func NewExhangeRateRepository(db *sql.DB) *ExhangeRateRepository {
 }
 
 func (repo *ExhangeRateRepository) CreateExchange(exchangeValue float64) error {
-	stmt, err := repo.db.Prepare("INSERT INTO Exchange (VALUE) VALUES (?)")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	conn, err := repo.db.Conn(ctx)
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
-	defer cancel()
+	defer conn.Close()
+	stmt, err := conn.PrepareContext(ctx, "INSERT INTO Exchange (VALUE) VALUES (?)")
+	if err != nil {
+		return err
+	}
 	defer stmt.Close()
 	_, err = stmt.Exec(exchangeValue)
 	if err != nil {
-		return err
+		log.Println("Error nserting into the database on func CreateExchange")
+		log.Println(err)
+		return context.Canceled
 	}
 	select {
 	case <-ctx.Done():
-		log.Println("Request Timeout inserting into the database, func CreateExchange")
+		log.Println("Context error on func CreateExchange")
 		return context.Canceled
 	default:
 		return nil
