@@ -20,7 +20,7 @@ func NewExchangeRateApi(url_api string) *ExchangeRateApi {
 }
 
 func callGetApi(api ExchangeRateApi) (*ApiResponse, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Nanosecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, "GET", api.url_api, nil)
 	if err != nil {
