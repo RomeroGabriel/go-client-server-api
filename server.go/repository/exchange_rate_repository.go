@@ -40,7 +40,6 @@ func (repo *ExhangeRateRepository) CreateExchange(exchangeValue float64) error {
 	}
 	select {
 	case <-ctx.Done():
-		log.Println("Request Timeout")
 		log.Println("Request Timeout inserting into the database, func CreateExchange")
 		return context.Canceled
 	default:
