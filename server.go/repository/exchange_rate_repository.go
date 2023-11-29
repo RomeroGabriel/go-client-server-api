@@ -39,7 +39,8 @@ func (repo *ExhangeRateRepository) CreateExchange(exchangeValue float64) error {
 	defer cancel()
 	conn, err := repo.db.Conn(ctx)
 	if err != nil {
-		return err
+		log.Println("Context error on func CreateExchange")
+		return context.Canceled
 	}
 	defer conn.Close()
 	stmt, err := conn.PrepareContext(ctx, "INSERT INTO Exchange (VALUE) VALUES (?)")
@@ -49,7 +50,7 @@ func (repo *ExhangeRateRepository) CreateExchange(exchangeValue float64) error {
 	defer stmt.Close()
 	_, err = stmt.Exec(exchangeValue)
 	if err != nil {
-		log.Println("Error nserting into the database on func CreateExchange")
+		log.Println("Error inserting into the database on func CreateExchange")
 		log.Println(err)
 		return context.Canceled
 	}
